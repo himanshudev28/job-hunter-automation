@@ -29,6 +29,10 @@ jobs:
         run: |
           python src/test_sheet.py
 
+      - name: Test Remote Jobs API
+        run: |
+          python src/fetch_remote_jobs.py
+      
       - name: Fetch Jobs
         env:
           APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
