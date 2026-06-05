@@ -1,28 +1,43 @@
 import requests
 
+KEYWORDS = [
+    "frontend",
+    "react",
+    "next",
+    "full stack",
+    "software engineer",
+    "associate software engineer",
+    "java developer",
+    "mern"
+]
+
 jobs = []
 
-# Remotive Jobs
-try:
-    response = requests.get(
-        "https://remotive.com/api/remote-jobs",
-        timeout=30
-    )
+response = requests.get(
+    "https://remotive.com/api/remote-jobs",
+    timeout=30
+)
 
-    data = response.json()
+data = response.json()
 
-    for job in data["jobs"]:
+for job in data["jobs"]:
+
+    title = job.get("title", "").lower()
+
+    if any(keyword in title for keyword in KEYWORDS):
+
         jobs.append({
             "title": job.get("title"),
             "company": job.get("company_name"),
-            "location": job.get("candidate_required_location"),
-            "url": job.get("url")
+            "url": job.get("url"),
+            "location": job.get("candidate_required_location")
         })
 
-except Exception as e:
-    print(e)
+print(f"Filtered Jobs: {len(jobs)}")
 
-print(f"Found {len(jobs)} jobs")
-
-for job in jobs[:10]:
-    print(job["title"])
+for job in jobs[:25]:
+    print(
+        f"{job['title']} | "
+        f"{job['company']} | "
+        f"{job['location']}"
+    )
