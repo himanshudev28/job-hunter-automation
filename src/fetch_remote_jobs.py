@@ -1,12 +1,28 @@
 import requests
 
-url = "https://remotive.com/api/remote-jobs"
+jobs = []
 
-response = requests.get(url)
+# Remotive Jobs
+try:
+    response = requests.get(
+        "https://remotive.com/api/remote-jobs",
+        timeout=30
+    )
 
-data = response.json()
+    data = response.json()
 
-print("Jobs Found:", len(data["jobs"]))
+    for job in data["jobs"]:
+        jobs.append({
+            "title": job.get("title"),
+            "company": job.get("company_name"),
+            "location": job.get("candidate_required_location"),
+            "url": job.get("url")
+        })
 
-for job in data["jobs"][:5]:
+except Exception as e:
+    print(e)
+
+print(f"Found {len(jobs)} jobs")
+
+for job in jobs[:10]:
     print(job["title"])
