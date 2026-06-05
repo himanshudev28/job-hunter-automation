@@ -18,7 +18,7 @@ SCOPES = [
     "https://www.googleapis.com/auth/drive",
 ]
 
-HEADER = ["Title", "Company", "Location", "Source", "URL"]
+HEADER = ["Group", "Title", "Company", "Location", "Source", "URL"]
 
 
 def open_sheet():
@@ -45,7 +45,14 @@ def main() -> None:
 
     jobs = get_jobs()
     new_rows = [
-        [job["title"], job["company"], job["location"], job["source"], job["url"]]
+        [
+            job.get("group", ""),
+            job["title"],
+            job["company"],
+            job["location"],
+            job["source"],
+            job["url"],
+        ]
         for job in jobs
         if job["url"] not in existing_urls
     ]
