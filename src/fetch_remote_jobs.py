@@ -37,7 +37,10 @@ for job in data["jobs"]:
 
     title = job.get("title", "").lower()
 
-    if any(keyword in title for keyword in KEYWORDS):
+   if (
+    any(keyword in title for keyword in KEYWORDS)
+    and not any(word in title for word in EXCLUDE)
+):
 
         jobs.append({
             "title": job.get("title"),
