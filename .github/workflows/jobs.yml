@@ -1,31 +1,36 @@
-name: Job Hunter
+name: Daily Job Hunter
 
 on:
   schedule:
-    # Runs every day at 08:00 UTC. Adjust the cron as needed.
-    - cron: "0 8 * * *"
-  workflow_dispatch: {}
+    - cron: "30 2 * * *"
+  workflow_dispatch:
 
 jobs:
-  fetch-and-notify:
+  hunt:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Python
+      - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: "3.11"
 
-      - name: Install dependencies
-        run: pip install -r src/requirements.txt
+      - name: Install
+        run: |
+          pip install -r src/requirements.txt
 
-      - name: Fetch jobs and notify
+      - name: Fetch Jobs
+        env:
+          APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
+        run: |
+          python src/fetch_jobs.py
+
+      - name: Send Telegram
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          SEARCH_QUERY: ${{ vars.SEARCH_QUERY || 'python' }}
-          MAX_JOBS: ${{ vars.MAX_JOBS || '10' }}
-        run: python src/fetch_jobs.py
+        run: |
+          python src/telegram_notify.py
