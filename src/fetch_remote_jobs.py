@@ -7,20 +7,15 @@ KEYWORDS = [
     "software engineer",
     "associate software engineer",
     "graduate engineer trainee",
-    "junior developer",
+    "graduate",
+    "trainee",
+    "intern",
+    "junior",
     "entry level",
     "full stack",
     "mern",
     "java developer"
 ]
-
-KEYWORDS.extend([
-    "graduate",
-    "trainee",
-    "intern",
-    "entry level",
-    "junior"
-])
 
 EXCLUDE = [
     "senior",
