@@ -4,11 +4,24 @@ KEYWORDS = [
     "frontend",
     "react",
     "next",
-    "full stack",
     "software engineer",
     "associate software engineer",
-    "java developer",
-    "mern"
+    "graduate engineer trainee",
+    "junior developer",
+    "entry level",
+    "full stack",
+    "mern",
+    "java developer"
+]
+
+EXCLUDE = [
+    "senior",
+    "staff",
+    "lead",
+    "principal",
+    "architect",
+    "manager",
+    "director"
 ]
 
 jobs = []
