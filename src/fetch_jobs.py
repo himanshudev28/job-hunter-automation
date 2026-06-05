@@ -1,21 +1,22 @@
-"""Fetch and filter real job postings from free job APIs.
+"""Fetch and filter real job postings, focused on India + open-remote roles.
 
 Sources (no API key required):
-  - Jobicy           : https://jobicy.com/api/v2/remote-jobs   (dev industry)
-  - WeWorkRemotely   : programming jobs RSS feed
-  - RemoteOK         : https://remoteok.com/api
+  - The Muse        : India-located software jobs across your target cities
+  - Jobicy          : remote dev jobs (kept only if open to India / worldwide)
+  - WeWorkRemotely  : programming RSS (kept only if "Anywhere in the World")
+  - RemoteOK        : remote jobs (kept only if India / worldwide)
 
-Import ``get_jobs()`` from other scripts to get a combined, de-duplicated,
-filtered list of jobs.
+Import ``get_jobs()`` to get a combined, de-duplicated, filtered list.
 """
 
 from __future__ import annotations
 
+import urllib.parse
+
 import feedparser
 import requests
 
-# Role-specific terms. A posting must match at least one of these. Kept
-# specific (e.g. "java developer" not bare "java") to avoid non-dev noise.
+# Role-specific terms. A posting must match at least one of these.
 KEYWORDS = [
     "frontend",
     "front end",
@@ -44,6 +45,7 @@ KEYWORDS = [
 # Drop senior / leadership roles — focus on fresher / early-career.
 EXCLUDE = [
     "senior",
+    "sr ",
     "sr.",
     "staff",
     "lead",
@@ -54,6 +56,21 @@ EXCLUDE = [
     "head of",
     "vp ",
 ]
+
+# India cities to search on The Muse.
+INDIA_CITIES = [
+    "Bangalore, India",
+    "Delhi, India",
+    "Noida, India",
+    "Gurgaon, India",
+    "Hyderabad, India",
+    "Pune, India",
+    "Mumbai, India",
+    "Chennai, India",
+]
+
+# For remote feeds: keep a job only if it is open to India or fully worldwide.
+OPEN_LOCATIONS = ["india", "anywhere", "worldwide", "global"]
 
 REQUEST_TIMEOUT = 30
 HEADERS = {"User-Agent": "Mozilla/5.0 (compatible; job-hunter-automation)"}
@@ -69,8 +86,50 @@ def _matches(title: str) -> bool:
     return True
 
 
+def _is_open_remote(location: str) -> bool:
+    """True if a remote-feed location is open to India or fully worldwide."""
+    return any(loc in (location or "").lower() for loc in OPEN_LOCATIONS)
+
+
+def fetch_themuse() -> list[dict]:
+    """Fetch India-located software jobs from The Muse."""
+    jobs: list[dict] = []
+    for city in INDIA_CITIES:
+        try:
+            url = (
+                "https://www.themuse.com/api/public/jobs"
+                "?category=Software%20Engineering"
+                f"&location={urllib.parse.quote(city)}&page=0"
+            )
+            response = requests.get(url, headers=HEADERS, timeout=REQUEST_TIMEOUT)
+            response.raise_for_status()
+            for job in response.json().get("results", []):
+                title = job.get("name", "")
+                levels = [lv.get("name", "").lower() for lv in job.get("levels", [])]
+                if "senior level" in levels or "management" in levels:
+                    continue
+                locations = [loc.get("name", "") for loc in job.get("locations", [])]
+                # Keep only genuinely India-located roles.
+                if not any("india" in loc.lower() for loc in locations):
+                    continue
+                if not _matches(title):
+                    continue
+                jobs.append(
+                    {
+                        "title": title.strip(),
+                        "company": (job.get("company", {}).get("name") or "").strip(),
+                        "location": ", ".join(locations) or "India",
+                        "url": job.get("refs", {}).get("landing_page", ""),
+                        "source": "The Muse",
+                    }
+                )
+        except Exception as exc:  # noqa: BLE001 - keep one source failure non-fatal
+            print(f"[The Muse] {city} error: {exc}")
+    return jobs
+
+
 def fetch_jobicy() -> list[dict]:
-    """Fetch and filter dev jobs from the Jobicy API."""
+    """Fetch dev jobs from Jobicy, kept only if open to India / worldwide."""
     jobs: list[dict] = []
     try:
         response = requests.get(
@@ -81,12 +140,13 @@ def fetch_jobicy() -> list[dict]:
         response.raise_for_status()
         for job in response.json().get("jobs", []):
             title = job.get("jobTitle", "")
-            if _matches(title):
+            geo = (job.get("jobGeo") or "").strip()
+            if _matches(title) and _is_open_remote(geo):
                 jobs.append(
                     {
                         "title": title.strip(),
                         "company": (job.get("companyName") or "").strip(),
-                        "location": (job.get("jobGeo") or "Remote").strip() or "Remote",
+                        "location": geo or "Remote",
                         "url": job.get("url", ""),
                         "source": "Jobicy",
                     }
@@ -97,23 +157,23 @@ def fetch_jobicy() -> list[dict]:
 
 
 def fetch_weworkremotely() -> list[dict]:
-    """Fetch and filter programming jobs from the WeWorkRemotely RSS feed."""
+    """Fetch programming jobs from WeWorkRemotely (worldwide-open only)."""
     jobs: list[dict] = []
     try:
         feed = feedparser.parse(
             "https://weworkremotely.com/categories/remote-programming-jobs.rss"
         )
         for entry in feed.entries:
-            # WWR titles look like "Company Name: Role Title".
-            raw = entry.get("title", "")
+            raw = entry.get("title", "")  # "Company Name: Role Title"
             company, _, role = raw.partition(":")
             role = role.strip() or raw
-            if _matches(role):
+            region = entry.get("region", "") or ""
+            if _matches(role) and _is_open_remote(region):
                 jobs.append(
                     {
                         "title": role,
                         "company": company.strip(),
-                        "location": entry.get("region", "Remote") or "Remote",
+                        "location": region or "Anywhere in the World",
                         "url": entry.get("link", ""),
                         "source": "WeWorkRemotely",
                     }
@@ -124,7 +184,7 @@ def fetch_weworkremotely() -> list[dict]:
 
 
 def fetch_remoteok() -> list[dict]:
-    """Fetch and filter jobs from the RemoteOK API."""
+    """Fetch jobs from RemoteOK, kept only if open to India / worldwide."""
     jobs: list[dict] = []
     try:
         response = requests.get(
@@ -134,7 +194,10 @@ def fetch_remoteok() -> list[dict]:
         for job in response.json()[1:]:  # first element is API metadata
             if not isinstance(job, dict):
                 continue
-            if _matches(job.get("position", "")):
+            location = job.get("location") or ""
+            # RemoteOK with no location is global remote — keep it.
+            open_remote = (not location.strip()) or _is_open_remote(location)
+            if _matches(job.get("position", "")) and open_remote:
                 url = job.get("url", "")
                 if url and not url.startswith("http"):
                     url = f"https://remoteok.com{url}"
@@ -142,8 +205,7 @@ def fetch_remoteok() -> list[dict]:
                     {
                         "title": (job.get("position") or "").strip(),
                         "company": (job.get("company") or "").strip(),
-                        "location": (job.get("location") or "Remote").strip()
-                        or "Remote",
+                        "location": location.strip() or "Remote",
                         "url": url,
                         "source": "RemoteOK",
                     }
@@ -154,12 +216,13 @@ def fetch_remoteok() -> list[dict]:
 
 
 def get_jobs(limit: int = 25) -> list[dict]:
-    """Return a combined, de-duplicated, filtered list of jobs."""
-    combined = fetch_jobicy() + fetch_weworkremotely() + fetch_remoteok()
+    """Return India-located jobs first, then open-remote jobs; de-duplicated."""
+    india_jobs = fetch_themuse()
+    remote_jobs = fetch_jobicy() + fetch_weworkremotely() + fetch_remoteok()
 
     seen: set[str] = set()
     unique: list[dict] = []
-    for job in combined:
+    for job in india_jobs + remote_jobs:  # India first
         if not job.get("title"):
             continue
         key = job.get("url") or f"{job['title']}|{job['company']}"
