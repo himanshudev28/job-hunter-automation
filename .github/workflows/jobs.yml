@@ -22,30 +22,18 @@ jobs:
         run: |
           pip install -r src/requirements.txt
 
-      - name: Test Google Sheet
+      - name: Update Google Sheet
+        working-directory: src
         env:
           GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
           GOOGLE_SHEET_ID: ${{ secrets.GOOGLE_SHEET_ID }}
         run: |
-          python src/test_sheet.py
-
-      - name: Test Remote Jobs API
-        run: |
-          python src/fetch_remote_jobs.py
-      
-      - name: Test RemoteOK API
-        run: |
-          python src/fetch_remoteok_jobs.py
-          
-   #   - name: Fetch Jobs
-   #      env:
-   #        APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
-   #      run: |
-   #        python src/fetch_jobs.py
+          python update_sheet.py
 
       - name: Send Telegram
+        working-directory: src
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
-          python src/telegram_notify.py
+          python telegram_notify.py
