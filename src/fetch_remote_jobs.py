@@ -30,9 +30,6 @@ EXCLUDE = [
 ALLOWED_LOCATIONS = [
     "india",
     "remote",
-    "worldwide",
-    "anywhere",
-    "asia",
     "bangalore",
     "bengaluru",
     "hyderabad",
