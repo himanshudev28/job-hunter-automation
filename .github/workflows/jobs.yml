@@ -33,6 +33,10 @@ jobs:
         run: |
           python src/fetch_remote_jobs.py
       
+      - name: Test RemoteOK API
+        run: |
+          python src/fetch_remoteok_jobs.py
+          
    #   - name: Fetch Jobs
    #      env:
    #        APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
