@@ -14,6 +14,14 @@ KEYWORDS = [
     "java developer"
 ]
 
+KEYWORDS.extend([
+    "graduate",
+    "trainee",
+    "intern",
+    "entry level",
+    "junior"
+])
+
 EXCLUDE = [
     "senior",
     "staff",
